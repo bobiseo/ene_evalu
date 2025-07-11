@@ -18,7 +18,12 @@ def preprocess_data(df):
     df = de_duplication(df)
     df = noise_remover(df)
 
-    # target labels
+    # ── NEW: translate summaries & content into English ──
+    df[Config.INTERACTION_CONTENT] = translate_to_en(df[Config.INTERACTION_CONTENT].tolist())
+    df[Config.TICKET_SUMMARY]       = translate_to_en(df[Config.TICKET_SUMMARY].tolist())
+
+
+    # 🔥 labels
     df["intent"] = df["y2"]
     df["tone"] = df["y3"]
     df["resolution"] = df["y4"]
@@ -56,9 +61,9 @@ if __name__ == '__main__':
     df = load_data()
     df = preprocess_data(df)
 
-    # Save cleaned data to file
+    # save cleaned data
     df.to_csv("cleaned_data_preview.csv", index=False)
-    print("✅ saved: cleaned_data_preview.csv")
+    print("✅ Saved data: cleaned_data_preview.csv")
 
     df[Config.INTERACTION_CONTENT] = df[Config.INTERACTION_CONTENT].values.astype('U')
     df[Config.TICKET_SUMMARY] = df[Config.TICKET_SUMMARY].values.astype('U')
@@ -68,7 +73,7 @@ if __name__ == '__main__':
     for name, group_df in grouped_df:
         print(f"\n[Group: {name}]")
 
-        # [Step 1] Intent prediction
+        # ----- [step1] Intent prediction -----
         group_df["y"] = group_df["intent"]
         X_intent, group_df = get_embeddings(group_df)
         data_intent = get_data_object(X_intent, group_df)
@@ -79,7 +84,7 @@ if __name__ == '__main__':
         predicted_series.iloc[:len(intent_preds)] = intent_preds
         group_df["predicted_intent"] = predicted_series
 
-        # [Step 2] Tone prediction
+        # ----- [step2] Tone prediction -----
         group_df["y"] = group_df["tone"]
         X_tone, group_df = get_embeddings(group_df)
         data_tone = get_data_object(X_tone, group_df)
@@ -90,7 +95,7 @@ if __name__ == '__main__':
         predicted_series.iloc[:len(tone_preds)] = tone_preds
         group_df["predicted_tone"] = predicted_series
 
-        # [Step 3] Resolution prediction
+        # ----- [step3] Resolution prediction -----
         group_df["y"] = group_df["resolution"]
         X_resolution, group_df = get_embeddings(group_df)
         data_resolution = get_data_object(X_resolution, group_df)
@@ -101,15 +106,15 @@ if __name__ == '__main__':
         predicted_series.iloc[:len(resolution_preds)] = resolution_preds
         group_df["predicted_resolution"] = predicted_series
 
-        # Save prediction results
+        # save results
         output_file = f"predictions_{name}.csv".replace(" ", "_").replace("&", "and")
         group_df.to_csv(output_file, index=False)
-        print(f"✅ CSV saved: {output_file}")
+        print(f"✅ saved prediction CSV : {output_file}")
 
-        # Calculate and save conditional accuracy
+        # compute and display conditional accuracy
         group_df, accuracy = compute_custom_accuracy(group_df)
         print(f"🎯 conditional accuracy (Group: {name}): {accuracy:.2%}")
 
         output_file_scored = output_file.replace(".csv", "_scored.csv")
         group_df.to_csv(output_file_scored, index=False)
-        print(f"✅ Scored CSV saved: {output_file_scored}")
+        print(f"✅ saved prediction with score CSV : {output_file_scored}")
