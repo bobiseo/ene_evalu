@@ -24,7 +24,10 @@ class Data:
         df = df.loc[keep_mask].reset_index(drop=True)
 
         # AFTER   (use the already-clean columns you made in preprocess_data)
-        self.y_df = df[["intent", "tone", "resolution"]].reset_index(drop=True)
+        # self.y_df = df[["intent", "tone", "resolution"]].reset_index(drop=True)
+
+        self.y_df = df[["intent", "combo_23", "combo_234"]].reset_index(drop=True)
+
         # single label (Intent) for legacy models
         self.y = df["intent"].to_numpy()
 

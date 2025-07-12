@@ -13,7 +13,7 @@ np.random.seed(SEED)
 
 # ───────── choose which model to run ─────────
 # "rf", "lr", "svm", "chain", "chain_lr", "chain_svm", …
-MODEL_KEY = "chain"            # ← flip it here only
+MODEL_KEY = "combined"            # ← flip it here only
 
 # ───────── pipeline helpers ─────────
 def load_data() -> pd.DataFrame:
@@ -34,6 +34,12 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df["intent"]     = df["y2"].fillna("none").replace('', "none")
     df["tone"]       = df["y3"].fillna("none").replace('', "none")
     df["resolution"] = df["y4"].fillna("none").replace('', "none")
+
+    # ── NEW combined targets for Design-1 ──────────────────────
+    df["combo_23"]  = df["intent"] + " | " + df["tone"]
+    df["combo_234"] = (
+        df["intent"] + " | " + df["tone"] + " | " + df["resolution"]
+    )
     return df
 
 # ───────── feature builder ─────────
@@ -99,7 +105,36 @@ if __name__ == "__main__":
         out.to_csv("predictions_chain.csv", index=False)
         print("📄 predictions_chain.csv saved")
 
-    else:  # single-stage models
+    elif MODEL_KEY == "combined":
+        # ── export three separate columns extracted from the combined strings
+        y_test_df = data.y_test_df().reset_index(drop=True)
+
+        texts = (
+            df.reset_index(drop=True)          # ensure positions match 0..n-1
+            .iloc[data.X_test_idx]["text"]   # positional slice
+            .tolist()
+        )
+        intent_true       = y_test_df["intent"].tolist()
+        tone_true         = [s.split(" | ")[1] for s in y_test_df["combo_23"]]
+        resolution_true   = [s.split(" | ")[2] for s in y_test_df["combo_234"]]
+        intent_pred       = preds["intent"].tolist()
+        tone_pred         = [s.split(" | ")[1] for s in preds["combo_23"]]
+        resolution_pred   = [s.split(" | ")[2] for s in preds["combo_234"]]
+
+        out = pd.DataFrame({
+            "text"            : texts,
+            "intent_true"     : intent_true,
+            "tone_true"       : tone_true,
+            "resolution_true" : resolution_true,
+            "intent_pred"     : intent_pred,
+            "tone_pred"       : tone_pred,
+            "resolution_pred" : resolution_pred,
+        })
+        out["score"] = out.apply(chain_score, axis=1)   # add chain-score
+        out.to_csv("predictions_combined.csv", index=False)
+        print("📄 predictions_combined.csv saved")
+
+    else:  # other single-stage models
         out = pd.DataFrame({
             "text"       : df.reset_index(drop=True).iloc[data.X_test_idx]["text"].reset_index(drop=True),
             "label_true" : data.y_test,
