@@ -8,17 +8,17 @@ np.random.seed(seed)
 
 def get_tfidf_embd(df: pd.DataFrame):
     from sklearn.feature_extraction.text import TfidfVectorizer
-    tfidfconverter = TfidfVectorizer(max_features=2000, min_df=4, max_df=0.90)
+    tfidfconverter = TfidfVectorizer(
+        max_features=2000, min_df=4, max_df=0.90, sublinear_tf=True
+    )
+    # pre-merged column
+    data = df["text"]
 
-    # basic text input
-    data = df[Config.TICKET_SUMMARY] + ' ' + df[Config.INTERACTION_CONTENT]
-
-    # Reflect predicted intent/tone in features
+    # Optional: append upstream predictions if they exist
     if "predicted_intent" in df.columns:
-        data = df["predicted_intent"].astype(str) + ' ' + data
-
+        data = df["predicted_intent"].astype(str) + " " + data
     if "predicted_tone" in df.columns:
-        data = df["predicted_tone"].astype(str) + ' ' + data
+        data = df["predicted_tone"].astype(str) + " " + data
 
     X = tfidfconverter.fit_transform(data).toarray()
     return X
