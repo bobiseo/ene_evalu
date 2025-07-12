@@ -1,11 +1,11 @@
 import pandas as pd 
 import re
 from Config import *
-
+from langdetect import detect, LangDetectException
 from googletrans import Translator
+from sklearn.model_selection import train_test_split
 
 translator = Translator()
-
 
 def get_input_data()->pd.DataFrame:
     df1 = pd.read_csv("data//AppGallery.csv", skipinitialspace=True)
@@ -113,6 +113,27 @@ def de_duplication(data: pd.DataFrame):
     data = data.drop(columns=['ic_deduplicated'])
     return data
 
+def coarse_clean(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Language-agnostic trim that runs *before* translation.
+    Removes headers, IDs, > quoting lines, excessive dashes, etc.
+    Keeps the text short for Google-Translate.
+    """
+    ic_col = Config.INTERACTION_CONTENT
+
+    header_regex = r"(from\s*:.*subject\s*:)|(on .* wrote:)|(-{5,}original message-{5,})"
+    dash_regex   = r"\-{4,}"          # long '----' separators
+    id_regex     = r"(ticket\s*id\s*:\s*\d+)|(xxxxx@xxxx\.com)|(\*\*\*\*\*\(PHONE\))"
+
+    patterns = [header_regex, dash_regex, id_regex]
+
+    for p in patterns:
+        df[ic_col] = df[ic_col].str.replace(p, " ", regex=True)
+
+    # squeeze multiple spaces
+    df[ic_col] = df[ic_col].str.replace(r"\s{2,}", " ", regex=True).str.strip()
+    return df
+
 def noise_remover(df: pd.DataFrame):
     noise = "(sv\s*:)|(wg\s*:)|(ynt\s*:)|(fw(d)?\s*:)|(r\s*:)|(re\s*:)|(\[|\])|(aspiegel support issue submit)|(null)|(nan)|((bonus place my )?support.pt 自动回复:)"
     df[Config.TICKET_SUMMARY] = df[Config.TICKET_SUMMARY].str.lower().replace(noise, " ", regex=True).replace(r'\s+', ' ', regex=True).str.strip()
@@ -168,20 +189,93 @@ def noise_remover(df: pd.DataFrame):
     #print(df.shape)
     return df
 
+# def translate_to_en(texts: list[str]) -> list[str]:
+#     """
+#     Translate each string in `texts` into English using googletrans.
+#     If translation fails or text is already English, return original.
+#     """
+#     results: list[str] = []
+#     for txt in texts:
+#         if not txt:
+#             results.append(txt)
+#             continue
+#         try:
+#             trans = translator.translate(txt, dest='en')
+#             results.append(trans.text)
+#         except Exception:
+#             # on error, just keep the original
+#             results.append(txt)
+#     return results
+
+
 def translate_to_en(texts: list[str]) -> list[str]:
     """
-    Translate each string in `texts` into English using googletrans.
-    If translation fails or text is already English, return original.
+    Return an English version of each string in `texts`.
+    • If the text is already (detected as) English, return it untouched.
+    • If detection fails or translation raises, fall back to the original text.
     """
     results: list[str] = []
+
     for txt in texts:
-        if not txt:
-            results.append(txt)
+        clean = (txt or "").strip()
+        if not clean or clean.isnumeric():          # nothing useful to translate
+            results.append(clean)
             continue
+
         try:
-            trans = translator.translate(txt, dest='en')
-            results.append(trans.text)
+            lang = detect(clean)
+        except LangDetectException:
+            lang = "unknown"
+
+        if lang == "en":
+            results.append(clean)
+            continue
+
+        try:
+            translated = translator.translate(clean, dest="en").text
+            results.append(translated)
         except Exception:
-            # on error, just keep the original
-            results.append(txt)
+            results.append(clean)                   # graceful degradation
+
     return results
+
+def merge_text_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge ticket summary + interaction content into df["text"].
+    Assumes each column is already cleaned and (if needed) translated to English.
+    """
+    df["text"] = (
+        df[Config.TICKET_SUMMARY].fillna("") + " " +
+        df[Config.INTERACTION_CONTENT].fillna("")
+    ).str.strip()
+    return df
+
+
+#new
+def load_and_split_data(test_size=0.3, val_size=0.15, stratify_col='y2'):
+    """
+    데이터 로드 → train/validation/test 분할하여 반환.
+    ├── test_size: 전체 중 테스트 비율
+    ├── val_size: 전체 중 검증(validation) 비율
+    └── stratify_col: 분할 시 분포 유지할 레이블 컬럼명
+    """
+    df = get_input_data()
+
+    # 1) train vs temp
+    train_df, temp_df = train_test_split(
+        df,
+        test_size=test_size,
+        stratify=df[stratify_col],
+        random_state=SEED
+    )
+
+    # 2) temp → val / test
+    relative_val = val_size / (1 - test_size)
+    val_df, test_df = train_test_split(
+        temp_df,
+        test_size=1 - relative_val,
+        stratify=temp_df[stratify_col],
+        random_state=SEED
+    )
+
+    return train_df, val_df, test_df  
