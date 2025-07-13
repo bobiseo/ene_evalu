@@ -1,7 +1,6 @@
 import pandas as pd
 from pathlib import Path
 
-# ───────── chain score ─────────
 def chain_score(row) -> float:
     """
     0.00  if intent wrong
@@ -18,7 +17,6 @@ def chain_score(row) -> float:
             score += 1.0 / 3
     return round(score, 2)
 
-# ───────── save helper ─────────
 def save_chained_results(preds, data, df, out_dir: str, model_key: str):
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
