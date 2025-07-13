@@ -21,7 +21,6 @@ def get_input_data()->pd.DataFrame:
 
 def de_duplication(data: pd.DataFrame):
     data["ic_deduplicated"] = ""
-
     cu_template = {
         "english":
             ["(?:Aspiegel|\*\*\*\*\*\(PERSON\)) Customer Support team\,?",
@@ -54,48 +53,34 @@ def de_duplication(data: pd.DataFrame):
              "(?:Aspiegel|\*\*\*\*\*\(PERSON\)) SE é o provedor de Huawei Mobile Services para Huawei e Honor proprietários de dispositivos na Europa, Canadá, Austrália, Nova Zelândia e outros países\.?"]
         ,
     }
-
     cu_pattern = ""
     for i in sum(list(cu_template.values()), []):
         cu_pattern = cu_pattern + f"({i})|"
     cu_pattern = cu_pattern[:-1]
-
-    # -------- email split template
-
+    # email split template
     pattern_1 = "(From\s?:\s?xxxxx@xxxx.com Sent\s?:.{30,70}Subject\s?:)"
     pattern_2 = "(On.{30,60}wrote:)"
     pattern_3 = "(Re\s?:|RE\s?:)"
     pattern_4 = "(\*\*\*\*\*\(PERSON\) Support issue submit)"
     pattern_5 = "(\s?\*\*\*\*\*\(PHONE\))*$"
-
     split_pattern = f"{pattern_1}|{pattern_2}|{pattern_3}|{pattern_4}|{pattern_5}"
-
-    # -------- start processing ticket data
-
+    # start processing ticket data
     tickets = data["Ticket id"].value_counts()
-
     for t in tickets.index:
         #print(t)
         df = data.loc[data['Ticket id'] == t,]
-
         # for one ticket content data
         ic_set = set([])
         ic_deduplicated = []
         for ic in df[Config.INTERACTION_CONTENT]:
-
             # print(ic)
-
             ic_r = re.split(split_pattern, ic)
             # ic_r = sum(ic_r, [])
-
             ic_r = [i for i in ic_r if i is not None]
-
             # replace split patterns
             ic_r = [re.sub(split_pattern, "", i.strip()) for i in ic_r]
-
             # replace customer template
             ic_r = [re.sub(cu_pattern, "", i.strip()) for i in ic_r]
-
             ic_current = []
             for i in ic_r:
                 if len(i) > 0:
@@ -104,7 +89,6 @@ def de_duplication(data: pd.DataFrame):
                         ic_set.add(i)
                         i = i + "\n"
                         ic_current = ic_current + [i]
-
             #print(ic_current)
             ic_deduplicated = ic_deduplicated + [' '.join(ic_current)]
         data.loc[data["Ticket id"] == t, "ic_deduplicated"] = ic_deduplicated
@@ -196,13 +180,11 @@ def translate_to_en(texts: list[str]) -> list[str]:
     • If detection fails or translation raises, fall back to the original text.
     """
     results: list[str] = []
-
     for txt in texts:
         clean = (txt or "").strip()
         if not clean or clean.isnumeric():      
             results.append(clean)
             continue
-
         try:
             lang = detect(clean)
         except LangDetectException:
@@ -211,13 +193,11 @@ def translate_to_en(texts: list[str]) -> list[str]:
         if lang == "en":
             results.append(clean)
             continue
-
         try:
             translated = translator.translate(clean, dest="en").text
             results.append(translated)
         except Exception:
             results.append(clean)               
-
     return results
 
 def merge_text_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -230,3 +210,33 @@ def merge_text_columns(df: pd.DataFrame) -> pd.DataFrame:
         df[Config.INTERACTION_CONTENT].fillna("")
     ).str.strip()
     return df
+
+# ───────── Full cleaning ─────────
+def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Full cleaning + label-combo builder, extracted from main.py."""
+    df = de_duplication(df)
+    df = coarse_clean(df)
+
+    df[Config.INTERACTION_CONTENT] = translate_to_en(df[Config.INTERACTION_CONTENT].tolist())
+    df[Config.TICKET_SUMMARY]      = translate_to_en(df[Config.TICKET_SUMMARY].tolist())
+
+    df = noise_remover(df)
+    df = merge_text_columns(df)            # makes df['text']
+
+    # label hygiene
+    df["intent"]     = df["y2"].fillna("none").replace("", "none")
+    df["tone"]       = df["y3"].fillna("none").replace("", "none")
+    df["resolution"] = df["y4"].fillna("none").replace("", "none")
+
+    # chained targets
+    df["combo_23"]  = df["intent"] + " | " + df["tone"]
+    df["combo_234"] = df["combo_23"] + " | " + df["resolution"]
+    return df
+
+# ───────── public API ─────────
+__all__ = [
+    "get_input_data",
+    "de_duplication", "coarse_clean", "noise_remover",
+    "translate_to_en", "merge_text_columns",
+    "preprocess_data"
+]
