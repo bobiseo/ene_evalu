@@ -25,10 +25,6 @@ class BaseModel(ABC):
         """
         ...
 
-    @abstractmethod
-    def data_transform(self) -> None:
-        return
-
     # def build(self, values) -> BaseModel:
     def build(self, values={}):
         values = values if isinstance(values, dict) else utils.string2any(values)
