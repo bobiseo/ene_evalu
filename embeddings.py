@@ -1,29 +1,15 @@
 import numpy as np
-import pandas as pd
-from Config import *
-import random
-seed =0
-random.seed(seed)
-np.random.seed(seed)
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-def get_tfidf_embd(df: pd.DataFrame):
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    tfidfconverter = TfidfVectorizer(
-        max_features=2000, min_df=4, max_df=0.90, sublinear_tf=True
+def get_tfidf_embd(df) -> np.ndarray:
+    """
+    Returns an n×D TF-IDF embedding matrix for df['text'].
+    """
+    vect = TfidfVectorizer(
+        max_features=10_000,
+        ngram_range=(1,2),
+        stop_words="english"
     )
-    # pre-merged column
-    data = df["text"]
-
-    # Optional: append upstream predictions if they exist
-    if "predicted_intent" in df.columns:
-        data = df["predicted_intent"].astype(str) + " " + data
-    if "predicted_tone" in df.columns:
-        data = df["predicted_tone"].astype(str) + " " + data
-
-    X = tfidfconverter.fit_transform(data).toarray()
+    X = vect.fit_transform(df["text"]).toarray()
     return X
-
-
-def combine_embd(X1, X2):
-    return np.concatenate((X1, X2), axis=1)
 
