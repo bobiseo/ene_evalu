@@ -1,9 +1,7 @@
-from model.chain import ChainModel
-from model.randomforest import RandomForest
-from .combined_model import CombinedLabelModel
+from .chained_rf import ChainedLabelModel
+from .chained_xgb import ChainedLabelXGBModel
 
 MODEL_REGISTRY = {
-    "rf":    RandomForest,
-    "chain": ChainModel,
-    "combined": CombinedLabelModel,
+    "chained_rf": ChainedLabelModel,
+    "chained_xgboost": ChainedLabelXGBModel
 }

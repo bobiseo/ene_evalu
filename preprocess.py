@@ -108,7 +108,7 @@ def de_duplication(data: pd.DataFrame):
             #print(ic_current)
             ic_deduplicated = ic_deduplicated + [' '.join(ic_current)]
         data.loc[data["Ticket id"] == t, "ic_deduplicated"] = ic_deduplicated
-    data.to_csv('out.csv')
+    # data.to_csv('out.csv')
     data[Config.INTERACTION_CONTENT] = data['ic_deduplicated']
     data = data.drop(columns=['ic_deduplicated'])
     return data
