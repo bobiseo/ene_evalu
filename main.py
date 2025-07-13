@@ -13,8 +13,8 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 # ───────── choose which model to run ─────────
-# "chained_rf", "chained_lr", "chained_svm", ...
-MODEL_KEY = "chained_rf"  
+# "chained_rf", "chained_lr", "chained_lgbm", "chained_cat",...
+MODEL_KEY = "chained_lr"  
 
 # ───────── main entry ─────────
 if __name__ == "__main__":
@@ -22,7 +22,6 @@ if __name__ == "__main__":
     # 1. Load raw data & full preprocessing
     df = preprocess_data(get_input_data())
     df.to_csv("out/cleaned_data_preview.csv", index=False)
-    # print("out/cleaned_data_preview.csv saved")
 
     # 2. Build embeddings
     X = get_tfidf_embd(df)
