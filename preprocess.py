@@ -189,25 +189,6 @@ def noise_remover(df: pd.DataFrame):
     #print(df.shape)
     return df
 
-# def translate_to_en(texts: list[str]) -> list[str]:
-#     """
-#     Translate each string in `texts` into English using googletrans.
-#     If translation fails or text is already English, return original.
-#     """
-#     results: list[str] = []
-#     for txt in texts:
-#         if not txt:
-#             results.append(txt)
-#             continue
-#         try:
-#             trans = translator.translate(txt, dest='en')
-#             results.append(trans.text)
-#         except Exception:
-#             # on error, just keep the original
-#             results.append(txt)
-#     return results
-
-
 def translate_to_en(texts: list[str]) -> list[str]:
     """
     Return an English version of each string in `texts`.
@@ -218,7 +199,7 @@ def translate_to_en(texts: list[str]) -> list[str]:
 
     for txt in texts:
         clean = (txt or "").strip()
-        if not clean or clean.isnumeric():          # nothing useful to translate
+        if not clean or clean.isnumeric():      
             results.append(clean)
             continue
 
@@ -235,7 +216,7 @@ def translate_to_en(texts: list[str]) -> list[str]:
             translated = translator.translate(clean, dest="en").text
             results.append(translated)
         except Exception:
-            results.append(clean)                   # graceful degradation
+            results.append(clean)               
 
     return results
 
@@ -249,33 +230,3 @@ def merge_text_columns(df: pd.DataFrame) -> pd.DataFrame:
         df[Config.INTERACTION_CONTENT].fillna("")
     ).str.strip()
     return df
-
-
-#new
-def load_and_split_data(test_size=0.3, val_size=0.15, stratify_col='y2'):
-    """
-    데이터 로드 → train/validation/test 분할하여 반환.
-    ├── test_size: 전체 중 테스트 비율
-    ├── val_size: 전체 중 검증(validation) 비율
-    └── stratify_col: 분할 시 분포 유지할 레이블 컬럼명
-    """
-    df = get_input_data()
-
-    # 1) train vs temp
-    train_df, temp_df = train_test_split(
-        df,
-        test_size=test_size,
-        stratify=df[stratify_col],
-        random_state=SEED
-    )
-
-    # 2) temp → val / test
-    relative_val = val_size / (1 - test_size)
-    val_df, test_df = train_test_split(
-        temp_df,
-        test_size=1 - relative_val,
-        stratify=temp_df[stratify_col],
-        random_state=SEED
-    )
-
-    return train_df, val_df, test_df  

@@ -9,6 +9,11 @@ Controller helpers that:
 from model import MODEL_REGISTRY                       # <-- new
 from sklearn.metrics import classification_report
 
+from warnings import filterwarnings
+from sklearn.exceptions import UndefinedMetricWarning
+
+filterwarnings("ignore", category=UndefinedMetricWarning)
+
 
 def model_predict(data, model_key: str = "rf", name: str = "Model"):
     """
@@ -33,17 +38,8 @@ def model_predict(data, model_key: str = "rf", name: str = "Model"):
     # 3. Predict on the held-out set
     preds = model.predict(data.X_test)
 
-    # 4. Evaluation
-    if model_key.startswith("chain"):     # ↳ returns a dict of three arrays
-        y_test_df = data.y_test_df()      # getters you added in Data class
-        print("\n--- Intent ---")
-        print(classification_report(y_test_df["intent"], preds["intent"]))
-        print("\n--- Tone ---")
-        print(classification_report(y_test_df["tone"], preds["tone"]))
-        print("\n--- Resolution ---")
-        print(classification_report(y_test_df["resolution"], preds["resolution"]))
-    else:                                 # single-stage (RandomForest, etc.)
-        model.print_results(data)
+    # # 4. Evaluation
+    model.print_results(data)
 
     # 5. Hand back predictions to caller (dict or 1-D ndarray)
     return preds
