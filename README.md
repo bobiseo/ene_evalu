@@ -1,4 +1,4 @@
-# Customer Interaction Tagging System
+# Engineering and Evaluating AI CA
 
 ** Mirae (24132799) & Aakash (23412101)
 
@@ -44,6 +44,6 @@ python main.py
 ```
 
 ## Inspect outputs
-out/:
+After running, check the **out/** forder for:
  `cleaned_data_preview.csv` 
  `predictions_<model_key>.csv` 
