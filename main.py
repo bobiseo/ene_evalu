@@ -14,7 +14,7 @@ np.random.seed(SEED)
 
 # ───────── choose which model to run ─────────
 # "chained_rf", "chained_lr", "chained_lgbm", "chained_cat",...
-MODEL_KEY = "chained_lr"  
+MODEL_KEY = "chained_cat"  
 
 # ───────── main entry ─────────
 if __name__ == "__main__":

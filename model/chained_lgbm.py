@@ -18,6 +18,7 @@ class ChainedLGCBMModel(BaseModel):
             n_estimators=100,
             learning_rate=0.1,
             random_state=0,
+            verbose=-1,
             **lgbm_params
         )
         self.models = {}
@@ -36,12 +37,12 @@ class ChainedLGCBMModel(BaseModel):
 
     def print_results(self, data) -> None:
         X_te, y_te = data.X_test, data.y_test_df()
-        print("\n--- Intent ---")
+        print("\n--- Intent (LGBM) ---")
         print(classification_report(y_te["intent"],
                                     self.models["intent"].predict(X_te)))
-        print("\n--- Intent + Tone ---")
+        print("\n--- Intent + Tone (LGBM)---")
         print(classification_report(y_te["combo_23"],
                                     self.models["combo_23"].predict(X_te)))
-        print("\n--- Intent + Tone + Resolution ---")
+        print("\n--- Intent + Tone + Resolution (LGBM)---")
         print(classification_report(y_te["combo_234"],
                                     self.models["combo_234"].predict(X_te)))
