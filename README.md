@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # Engineering and Evaluating AI CA
-=======
-# Engineering and Evaluation CA
->>>>>>> origin/main
 
 ** Mirae (24132799) & Aakash (23412101)
 
